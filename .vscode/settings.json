@@ -1,0 +1,24 @@
+{
+    "cSpell.words": [
+        "aiohttp",
+        "astimezone",
+        "asyncio",
+        "ingame"
+    ],
+    "editor.tabCompletion": "on",
+    "python.linting.pylintEnabled": false,
+    "python.linting.flake8Enabled": true,
+    "python.linting.enabled": true,
+    "python.linting.lintOnSave": true,
+    "editor.formatOnSave": true,
+    "python.linting.flake8Args": [
+        "--ignore=W293, W504",
+        "--max-line-length=200",
+        "--max-complexity=20"
+    ],
+    "python.formatting.autopep8Args": [
+        "--aggressive", "--aggressive",
+        "--max-line-length", "200",
+    ],
+    "autoDocstring.docstringFormat": "google",
+}

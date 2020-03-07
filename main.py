@@ -102,7 +102,7 @@ class EventInfo:
         print('----')
         print('Sending a message...')
         await channel.send(text)
-        await print('Sent a message!')
+        print('Sent a message!')
 
 
 class MyClient(discord.Client):
@@ -174,7 +174,7 @@ async def wait(event: EventInfo) -> bool:
         False
 
     else:
-        wait_to = event.time - timedelta(seconds=notice_margin)
+        wait_to = event.time - notice_margin
         print(f'Waiting for {wait_sec} seconds from {now} to {wait_to} for {event.name}.')
 
         await asyncio.sleep(wait_sec)

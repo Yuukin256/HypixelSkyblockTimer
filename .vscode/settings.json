@@ -4,6 +4,7 @@
         "astimezone",
         "asyncio",
         "ingame",
+        "timetz",
         "tzinfo"
     ],
     "editor.tabCompletion": "on",

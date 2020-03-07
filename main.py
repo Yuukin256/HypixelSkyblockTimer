@@ -85,7 +85,7 @@ class EventInfo:
         else:
             s_time = format_datetime(self.time)
             e_time = format_datetime(self.time + self.duration)
-            start_in = timedelta(notice_margin).seconds / 60
+            start_in = notice_margin.total_seconds() / 60
             # Notify massage of each events.
             # means "(event name) will be start in (start_in) minutes."
             texts = {

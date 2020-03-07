@@ -1,4 +1,0 @@
-daily_notice_hour = 毎日何時にお知らせするか (int)
-notice_margin = イベント時刻の何秒前にお知らせするか (int)
-discord_token = 'Bot のアクセストークン' (str)
-discord_channel = Discord のチャンネル (int)

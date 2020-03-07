@@ -3,7 +3,8 @@
         "aiohttp",
         "astimezone",
         "asyncio",
-        "ingame"
+        "ingame",
+        "tzinfo"
     ],
     "editor.tabCompletion": "on",
     "python.linting.pylintEnabled": false,
@@ -21,4 +22,6 @@
         "--max-line-length", "200",
     ],
     "autoDocstring.docstringFormat": "google",
+    "autoDocstring.quoteStyle": "'''",
+    "autoDocstring.startOnNewLine": true,
 }

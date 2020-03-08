@@ -11,7 +11,6 @@ from requests.exceptions import ConnectionError, HTTPError, Timeout
 
 # 設定: 必要に応じて変更
 TZ = timezone(timedelta(hours=+9), 'JST')
-daily_notice_time = time(hour=8, tzinfo=TZ)
 notice_margin = timedelta(minutes=10)
 update_interval = timedelta(minutes=10)
 discord_token = os.environ['DISCORD_TOKEN']
@@ -21,10 +20,6 @@ discord_channel = int(os.environ['DISCORD_CHANNEL'])
 class BaseEvent:
     def __init__(self, name: str):
         self.name = name
-
-    def update(self):
-        while not self._update():
-            sleep(1)
 
     async def wait(self) -> bool:
         '''
@@ -87,34 +82,26 @@ class BaseEvent:
 
 
 class DailyEvent(BaseEvent):
-    def __init__(self, name: str):
+    def __init__(self, name: str, notice_time: time):
         super().__init__(name)
+        self.set_time = notice_time
 
-    def _update(self):
-        '''
-        Returns:
-            bool: True
-
-        '''
-
+    def update(self):
         now = datetime.now(TZ)
         now_ymd = (now.year, now.month, now.day)
-        daily_notice_time_ymd = (daily_notice_time.hour, daily_notice_time.minute, daily_notice_time.second)
+        set_time_hms = (self.set_time.hour, self.set_time.minute, self.set_time.second)
 
-        if now + notice_margin < datetime(*now_ymd, *daily_notice_time_ymd, tzinfo=TZ):  # その日のお知らせ時刻をまだ過ぎていない場合
-            self.time = datetime(*now_ymd, *daily_notice_time_ymd, tzinfo=TZ)
+        if now + notice_margin < datetime(*now_ymd, *set_time_hms, tzinfo=TZ):  # その日のお知らせ時刻をまだ過ぎていない場合
+            self.time = datetime(*now_ymd, *set_time_hms, tzinfo=TZ)
 
         else:  # その日のお知らせ時刻を過ぎている場合
             tomorrow = now + timedelta(days=1)
-            self.time = datetime(tomorrow.year, tomorrow.month, tomorrow.day, *daily_notice_time_ymd, tzinfo=TZ)
-
-        return True
+            self.time = datetime(tomorrow.year, tomorrow.month, tomorrow.day, *set_time_hms, tzinfo=TZ)
 
     async def notify(self, timers: list):
-        timers = [timer for timer in timers if timer.name != 'daily']
         text = '次回のイベント開始時刻をお知らせします。'
 
-        for event in timers:
+        for event in [timer for timer in timers if timer.name != 'daily']:
             time = self._format_datetime(event.time)
             text += f'\n{event.name}: {time}'
 
@@ -127,38 +114,36 @@ class GameEvent(BaseEvent):
         self.duration = duration
         self.url = api_url
 
-    def _update(self):
-        '''
-        Returns:
-            [bool]: 取得成功時は True 失敗時は False
+    def update(self):
+        def _update_core(self):
+            try:
+                r = requests.get(self.url, timeout=1.0)
 
-        '''
+                if r.status_code == 200:
+                    data = r.json()
+                    dt = datetime.fromtimestamp(data['estimate'] // 1000, TZ)
+                    self.time = dt
+                    return True
 
-        try:
-            r = requests.get(self.url, timeout=9.0)
+                else:
+                    print(f'{self.url} response is {r.status_code}.')
+                    return False
 
-            if r.status_code == 200:
-                data = r.json()
-                dt = datetime.fromtimestamp(data['estimate'] // 1000, TZ)
-                self.time = dt
-                return True
-
-            else:
-                print(f'{self.url} response is {r.status_code}.')
+            except Timeout:
+                print(f'Connecting to {self.url} was timeout.')
+                return False
+            except ConnectionError:
+                print(f'Connecting to {self.url} was failed.')
+                return False
+            except HTTPError:
+                print(f'{self.url} response is invalid.')
+                return False
+            except JSONDecodeError:
+                print('Failed to load json.')
                 return False
 
-        except Timeout:
-            print(f'Connecting to {self.url} was timeout.')
-            return False
-        except ConnectionError:
-            print(f'Connecting to {self.url} was failed.')
-            return False
-        except HTTPError:
-            print(f'{self.url} response is invalid.')
-            return False
-        except JSONDecodeError:
-            print('Failed to load json.')
-            return False
+        while not _update_core(self):
+            sleep(1)
 
     async def notify(self):
         s_time = self._format_datetime(self.time)
@@ -184,27 +169,26 @@ class MyClient(discord.Client):
         self.bg_task = self.loop.create_task(self.timer())
 
     async def on_ready(self):
-        print(f'Logged in as {self.user.name}.')
+        print(f'{self.user.name} でログインしました')
         print('------')
 
         # アクティビティを指定
-        await client.change_presence(activity=discord.Activity(name='HypixelSkyblockTimer', type=discord.ActivityType.playing))
+        await self.change_presence(activity=discord.Activity(name='HypixelSkyblockTimer', type=discord.ActivityType.playing))
 
     async def timer(self):
         # Bot が起動 + 1 秒経過するまで待機
         await self.wait_until_ready()
         await asyncio.sleep(1)
 
-        timers = [
-            DailyEvent('daily'),
-            GameEvent('New Year', timedelta(hours=1), 'https://hypixel-api.inventivetalent.org/api/skyblock/newyear/estimate'),
-            GameEvent('Traveling Zoo', timedelta(hours=1), 'https://hypixel-api.inventivetalent.org/api/skyblock/zoo/estimate'),
-            GameEvent('Spooky Festival', timedelta(hours=1), 'https://hypixel-api.inventivetalent.org/api/skyblock/spookyFestival/estimate'),
-            GameEvent('Winter Event', timedelta(hours=1), 'https://hypixel-api.inventivetalent.org/api/skyblock/winter/estimate')
-        ]
-
         # Bot 起動中は無限ループ
         while not self.is_closed():
+            timers = [
+                DailyEvent('daily', time(hour=8, tzinfo=TZ)),
+                GameEvent('New Year', timedelta(hours=1), 'https://hypixel-api.inventivetalent.org/api/skyblock/newyear/estimate'),
+                GameEvent('Traveling Zoo', timedelta(hours=1), 'https://hypixel-api.inventivetalent.org/api/skyblock/zoo/estimate'),
+                GameEvent('Spooky Festival', timedelta(hours=1), 'https://hypixel-api.inventivetalent.org/api/skyblock/spookyFestival/estimate'),
+                GameEvent('Winter Event', timedelta(hours=1), 'https://hypixel-api.inventivetalent.org/api/skyblock/winter/estimate')
+            ]
 
             # 全タイマーを再取得
             for timer in timers:
@@ -218,7 +202,6 @@ class MyClient(discord.Client):
             print(f'次のイベントは {next_event.name} {next_event.time} です')
 
             if await next_event.wait():
-
                 if isinstance(next_event, DailyEvent):
                     await next_event.notify(timers)
                 else:
@@ -228,9 +211,6 @@ class MyClient(discord.Client):
 
 
 if __name__ == '__main__':
-    print(f'毎日の通知時刻: {daily_notice_time}')
-    print(f'お知らせのイベント開始までの時間: {notice_margin}')
-    print(f'イベント時刻を再取得する間隔: {update_interval}')
-    print('------')
+    print('Discord にログイン中...')
     client = MyClient()
     client.run(discord_token)

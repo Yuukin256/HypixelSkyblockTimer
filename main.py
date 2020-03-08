@@ -15,7 +15,7 @@ daily_notice_time = time(hour=8, tzinfo=TZ)
 notice_margin = timedelta(minutes=10)
 update_interval = timedelta(minutes=10)
 discord_token = os.environ['DISCORD_TOKEN']
-discord_channel = os.environ['DISCORD_CHANNEL']
+discord_channel = int(os.environ['DISCORD_CHANNEL'])
 
 
 class BaseEvent:
@@ -68,18 +68,22 @@ class BaseEvent:
     async def _send_message(self, text: str):
         channel = client.get_channel(discord_channel)
 
-        print('メッセージを送信します')
-        prev_message = await channel.history(limit=1).flatten()
-        if text == prev_message[0].content:
-            print('前回のメッセージと同じ内容です！送信を中止します')
+        if channel is None:
+            print('送信先のチャンネルが見つかりませんでした')
 
         else:
-            print('----')
-            print(text)
-            print('----')
-            print('送信中...')
-            await channel.send(text)
-            print('完了！')
+            print('メッセージを送信します')
+            prev_message = await channel.history(limit=1).flatten()
+            if text == prev_message[0].content:
+                print('前回のメッセージと同じ内容です！送信を中止します')
+
+            else:
+                print('------')
+                print(text)
+                print('------')
+                print('送信中...')
+                await channel.send(text)
+                print('完了！')
 
 
 class DailyEvent(BaseEvent):
@@ -216,6 +220,8 @@ class MyClient(discord.Client):
                     await next_event.notify(timers)
                 else:
                     await next_event.notify()
+
+            print('------')
 
 
 if __name__ == '__main__':

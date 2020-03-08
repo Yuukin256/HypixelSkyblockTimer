@@ -26,7 +26,7 @@ class BaseEvent:
         while not self._update():
             sleep(1)
 
-    async def wait(self):
+    async def wait(self) -> bool:
         '''
         イベント時刻から notify_margin を引いた時刻が来るか、update_interval で指定した時間が経つまで待機する
 
@@ -168,8 +168,8 @@ class GameEvent(BaseEvent):
         texts = {
             'New Year': f'New Year\'s Day が{start_in}分後から始まります\n{s_time}～{e_time}',
             'Traveling Zoo': f'Traveling Zoo が{start_in}分後から始まります\n{s_time}～{e_time}',
-            'Spooky Festival': f'Spooky Festival が{start_in}分後から始まります\n期間: {s_time}～{e_time}',
-            'Winter Event': f'Winter Event が{start_in}分後から始まります\n期間: {s_time}～{e_time}'
+            'Spooky Festival': f'Spooky Festival が{start_in}分後から始まります\n{s_time}～{e_time}',
+            'Winter Event': f'Winter Event が{start_in}分後から始まります\n{s_time}～{e_time}'
         }
         text = texts[self.name]
 
@@ -186,6 +186,9 @@ class MyClient(discord.Client):
     async def on_ready(self):
         print(f'Logged in as {self.user.name}.')
         print('------')
+
+        # アクティビティを指定
+        await client.change_presence(activity=discord.Activity(name='HypixelSkyblockTimer', type=discord.ActivityType.playing))
 
     async def timer(self):
         # Bot が起動 + 1 秒経過するまで待機

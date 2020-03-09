@@ -11,7 +11,7 @@ from requests.exceptions import ConnectionError, HTTPError, Timeout
 
 # 設定: 必要に応じて変更
 TZ = timezone(timedelta(hours=+9), 'JST')
-notice_margin = timedelta(minutes=10)
+notify_margin = timedelta(minutes=10)
 update_interval = timedelta(minutes=10)
 discord_token = os.environ['DISCORD_TOKEN']
 discord_channel = int(os.environ['DISCORD_CHANNEL'])
@@ -23,20 +23,20 @@ class BaseEvent:
 
     async def wait(self) -> bool:
         '''
-        イベント時刻から notify_margin を引いた時刻が来るか、update_interval で指定した時間が経つまで待機する
+        イベントをお知らせする時刻が来るか、update_interval で指定した時間が経つまで待機する
 
         Returns:
-            [bool]: イベント時刻から notify_margin を引いた時刻が来たら True 、それ以外なら False
+            [bool]: イベントをお知らせする時刻が来たら True 、それ以外なら False
 
         '''
 
         now = datetime.now(TZ)
-        diff = self.time - now
-        wait_sec = int((diff - notice_margin).total_seconds())
+        diff = self.notify_time - now
+        wait_sec = int(diff.total_seconds())
 
         if wait_sec > update_interval.seconds:  # 次のイベントの時間が update_interval より先の場合
             wait_to = now + update_interval
-            print(f'イベント時刻再取得 のため {now} から {wait_to} まで {update_interval.seconds} 秒待機します')
+            print(f'イベント時刻再取得のため {now} から {wait_to} まで {update_interval.seconds} 秒待機します')
             await asyncio.sleep(update_interval.seconds)
             return False
 
@@ -45,7 +45,7 @@ class BaseEvent:
             return False
 
         else:
-            wait_to = self.time - notice_margin
+            wait_to = self.notify_time
             print(f'{self.name} のため {now} から {wait_to} まで {wait_sec} 秒待機します')
 
             await asyncio.sleep(wait_sec)
@@ -82,21 +82,23 @@ class BaseEvent:
 
 
 class DailyEvent(BaseEvent):
-    def __init__(self, name: str, notice_time: time):
+    def __init__(self, name: str, notify_time: time):
         super().__init__(name)
-        self.set_time = notice_time
+        self.set_time = notify_time
 
     def update(self):
         now = datetime.now(TZ)
         now_ymd = (now.year, now.month, now.day)
         set_time_hms = (self.set_time.hour, self.set_time.minute, self.set_time.second)
 
-        if now + notice_margin < datetime(*now_ymd, *set_time_hms, tzinfo=TZ):  # その日のお知らせ時刻をまだ過ぎていない場合
+        if now + notify_margin < datetime(*now_ymd, *set_time_hms, tzinfo=TZ):  # その日のお知らせ時刻をまだ過ぎていない場合
             self.time = datetime(*now_ymd, *set_time_hms, tzinfo=TZ)
 
         else:  # その日のお知らせ時刻を過ぎている場合
             tomorrow = now + timedelta(days=1)
             self.time = datetime(tomorrow.year, tomorrow.month, tomorrow.day, *set_time_hms, tzinfo=TZ)
+
+        self.notify_time = self.time
 
     async def notify(self, timers: list):
         text = '次回のイベント開始時刻をお知らせします。'
@@ -123,6 +125,7 @@ class GameEvent(BaseEvent):
                     data = r.json()
                     dt = datetime.fromtimestamp(data['estimate'] // 1000, TZ)
                     self.time = dt
+                    self.notify_time = dt - notify_margin
                     return True
 
                 else:
@@ -148,7 +151,7 @@ class GameEvent(BaseEvent):
     async def notify(self):
         s_time = self._format_datetime(self.time)
         e_time = self._format_datetime(self.time + self.duration)
-        start_in = int(notice_margin.total_seconds() / 60)
+        start_in = int(notify_margin.total_seconds() / 60)
 
         texts = {
             'New Year': f'New Year\'s Day が{start_in}分後から始まります\n{s_time}～{e_time}',

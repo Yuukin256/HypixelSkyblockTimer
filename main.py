@@ -200,7 +200,7 @@ class MyClient(discord.Client):
             print('イベント時刻を取得しました')
 
             # タイマーを時間順で並び替え
-            timers = sorted(timers, key=lambda i: i.time)
+            timers = sorted(timers, key=lambda i: i.notify_time)
             next_event = timers[0]
             print(f'次のイベントは {next_event.name} {next_event.time} です')
 

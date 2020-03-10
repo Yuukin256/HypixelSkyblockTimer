@@ -32,7 +32,7 @@ class BaseEvent:
 
         now = datetime.now(TZ)
         diff = self.notify_time - now
-        wait_sec = int(diff.total_seconds())
+        wait_sec = diff.total_seconds()
 
         if wait_sec > update_interval.seconds:  # 次のイベントの時間が update_interval より先の場合
             wait_to = now + update_interval
@@ -82,16 +82,16 @@ class BaseEvent:
 
 
 class DailyEvent(BaseEvent):
-    def __init__(self, name: str, notify_time: time):
+    def __init__(self, name: str, set_time: time):
         super().__init__(name)
-        self.set_time = notify_time
+        self.set_time = set_time
 
     def update(self):
         now = datetime.now(TZ)
         now_ymd = (now.year, now.month, now.day)
         set_time_hms = (self.set_time.hour, self.set_time.minute, self.set_time.second)
 
-        if now + notify_margin < datetime(*now_ymd, *set_time_hms, tzinfo=TZ):  # その日のお知らせ時刻をまだ過ぎていない場合
+        if now < datetime(*now_ymd, *set_time_hms, tzinfo=TZ):  # その日のお知らせ時刻をまだ過ぎていない場合
             self.time = datetime(*now_ymd, *set_time_hms, tzinfo=TZ)
 
         else:  # その日のお知らせ時刻を過ぎている場合

@@ -41,7 +41,8 @@ class BaseEvent:
             return False
 
         elif wait_sec <= 0:  # 次のイベントのお知らせ時刻を過ぎている場合
-            print(f'{self.name} の時間が過ぎています！')
+            print(f'{self.name} の時間が過ぎています！300 秒経過後、イベント時刻を再取得します。')
+            await asyncio.sleep(300)
             return False
 
         else:

@@ -57,9 +57,9 @@ class BaseEvent:
         day_of_week = weekdays[dt.weekday()]
 
         if dt.second == 0:
-            return f'{dt.year}年{dt.month}月{dt.day}日 ({day_of_week}) {dt.hour}時{dt.minute}分'
+            return f'{dt.month}月{dt.day}日 ({day_of_week}) {dt.hour}時{dt.minute}分'
         else:
-            return f'{dt.year}年{dt.month}月{dt.day}日 ({day_of_week}) {dt.hour}時{dt.minute}分{dt.second}秒'
+            return f'{dt.month}月{dt.day}日 ({day_of_week}) {dt.hour}時{dt.minute}分{dt.second}秒'
 
     async def _send_message(self, text: str):
         channel = client.get_channel(discord_channel)
